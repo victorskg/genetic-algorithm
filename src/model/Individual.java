@@ -34,7 +34,7 @@ public class Individual {
 
     @Override
     public String toString() {
-        return path.toString();
+        return path.toString() + ": " + fitness;
     }
 
     private void calculateFitness(Cities cities) {
@@ -51,5 +51,12 @@ public class Individual {
         return iterate(randomCut, i -> i < numberOfChromosomes, i -> i + 1)
                 .mapToObj(i -> path.get(i))
                 .collect(toCollection(ArrayList::new));
+    }
+
+    public void mutate(int chromosomeOne, int chromosomeTwo) {
+        var one = path.get(chromosomeOne);
+        var two = path.get(chromosomeTwo);
+        path.set(chromosomeOne, one);
+        path.set(chromosomeTwo, two);
     }
 }
