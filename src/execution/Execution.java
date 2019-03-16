@@ -7,8 +7,8 @@ public class Execution {
     public static void main(String[] args) {
         var cities = Cities.generate(10);
         var ga = new GeneticAlgorithm(cities,
-                1,
-                0.3,
+                9,
+                0.5,
                 1000,
                 1000,
                 10,

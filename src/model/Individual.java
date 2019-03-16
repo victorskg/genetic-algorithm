@@ -28,17 +28,21 @@ public class Individual {
         return numberOfChromosomes;
     }
 
-    public ArrayList<Integer> getPath() {
-        return path;
-    }
-
     @Override
     public String toString() {
         return path.toString() + ": " + fitness;
     }
 
     private void calculateFitness(Cities cities) {
-        this.fitness = range(0, path.size() - 1).mapToDouble(i -> cities.getDistanceFrom(path.get(i), path.get(i + 1))).sum();
+        var repeated = 0;
+        var auxArray = new ArrayList<>();
+
+        for (var integer : path) {
+            if (auxArray.contains(integer)) repeated++;
+            auxArray.add(integer);
+        }
+
+        this.fitness = repeated != 1 ? Double.MAX_VALUE : range(0, path.size() - 1).mapToDouble(i -> cities.getDistanceFrom(path.get(i), path.get(i + 1))).sum();
     }
 
     public ArrayList<Integer> getChromosomeUntil(int randomCut) {
