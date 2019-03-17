@@ -1,31 +1,30 @@
 package model;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 import static java.util.stream.Collectors.toCollection;
-import static java.util.stream.IntStream.iterate;
 import static java.util.stream.IntStream.range;
+import static java.util.stream.IntStream.rangeClosed;
 
 public class Individual {
 
+    private Cities cities;
     private Double fitness;
     private int numberOfChromosomes;
     private ArrayList<Integer> path;
 
     public Individual(ArrayList<Integer> path, Cities cities) {
         this.path = path;
+        this.cities = cities;
         this.numberOfChromosomes = path.size();
 
-        calculateFitness(cities);
+        calculateFitness();
     }
 
     public Double getFitness() {
         return fitness;
-    }
-
-
-    public int getNumberOfChromosomes() {
-        return numberOfChromosomes;
     }
 
     @Override
@@ -33,34 +32,53 @@ public class Individual {
         return path.toString() + ": " + fitness;
     }
 
-    private void calculateFitness(Cities cities) {
-        var repeated = 0;
-        var auxArray = new ArrayList<>();
-
-        for (var integer : path) {
-            if (auxArray.contains(integer)) repeated++;
-            auxArray.add(integer);
-        }
-
-        this.fitness = repeated != 1 ? Double.MAX_VALUE : range(0, path.size() - 1).mapToDouble(i -> cities.getDistanceFrom(path.get(i), path.get(i + 1))).sum();
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Individual that = (Individual) o;
+        return path.equals(that.path);
     }
 
-    public ArrayList<Integer> getChromosomeUntil(int randomCut) {
-        return range(0, randomCut)
-                .mapToObj(i -> path.get(i))
-                .collect(toCollection(ArrayList::new));
+    @Override
+    public int hashCode() {
+        return Objects.hash(path);
     }
 
-    public ArrayList<Integer> getChromosomeFrom(int randomCut) {
-        return iterate(randomCut, i -> i < numberOfChromosomes, i -> i + 1)
-                .mapToObj(i -> path.get(i))
-                .collect(toCollection(ArrayList::new));
+    private void calculateFitness() {
+        this.fitness = range(0, path.size() - 1).mapToDouble(i -> cities.getDistanceFrom(path.get(i), path.get(i + 1))).sum();
     }
 
     public void mutate(int chromosomeOne, int chromosomeTwo) {
         var one = path.get(chromosomeOne);
         var two = path.get(chromosomeTwo);
-        path.set(chromosomeOne, one);
-        path.set(chromosomeTwo, two);
+        path.set(chromosomeOne, two);
+        path.set(chromosomeTwo, one);
+
+        calculateFitness();
+    }
+
+    public List<Individual> crossoverWith(Individual mother, int firstCut, int secondCut) {
+        var firstChildChromosome = new ArrayList<>(path);
+        var fathersFirstChildChromosome = rangeClosed(firstCut, secondCut).mapToObj(i -> path.get(i)).collect(toCollection(ArrayList::new));
+        var mothersFirstChildChromosome = range(1, numberOfChromosomes - 1)
+                .filter(i -> !fathersFirstChildChromosome.contains(mother.path.get(i)))
+                .mapToObj(i -> mother.path.get(i)).collect(toCollection(ArrayList::new));
+
+
+        var secondChildChromosome = new ArrayList<>(mother.path);
+        var motherSecondChildChromosome = rangeClosed(firstCut, secondCut).mapToObj(i -> mother.path.get(i)).collect(toCollection(ArrayList::new));
+        var fatherSecondChildChromosome = range(1, numberOfChromosomes - 1)
+                .filter(i -> !motherSecondChildChromosome.contains(path.get(i)))
+                .mapToObj(i -> path.get(i)).collect(toCollection(ArrayList::new));
+
+        for (var i = 1; i < numberOfChromosomes - 1; i++) {
+            if (i < firstCut || i > secondCut) {
+                firstChildChromosome.set(i, mothersFirstChildChromosome.remove(0));
+                secondChildChromosome.set(i, fatherSecondChildChromosome.remove(0));
+            }
+        }
+
+        return List.of(new Individual(firstChildChromosome, cities), new Individual(secondChildChromosome, cities));
     }
 }

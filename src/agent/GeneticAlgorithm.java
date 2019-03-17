@@ -9,30 +9,34 @@ import java.util.List;
 import java.util.Random;
 
 import static java.util.Collections.shuffle;
+import static java.util.stream.Collectors.toCollection;
 
 public class GeneticAlgorithm {
 
     private Random random;
     private Cities cities;
     private int startCity;
+    private int elitePair;
     private int populationSize;
     private int maxGenerations;
     private int forReproduction;
     private Double mutationRate;
     private int pairsToReproduction;
+    private int numberOfChromosomes;
     private Population initialPopulation;
 
-    public GeneticAlgorithm(Cities cities, int startCity, Double mutationRate, int populationSize, int maxGenerations, int forReproduction, int pairsToReproduction) {
+    public GeneticAlgorithm(Cities cities, int startCity, int elitePair, Double mutationRate, int populationSize, int maxGenerations, int forReproduction, int pairsToReproduction) {
         this.cities = cities;
         this.startCity = startCity;
+        this.elitePair = elitePair;
         this.random = new Random();
         this.mutationRate = mutationRate;
         this.populationSize = populationSize;
         this.maxGenerations = maxGenerations;
         this.forReproduction = forReproduction;
+        this.numberOfChromosomes = cities.getSize();
+        this.initialPopulation = generatePopulation();
         this.pairsToReproduction = pairsToReproduction;
-
-        generateInitialPopulation();
     }
 
     public void run() {
@@ -46,12 +50,18 @@ public class GeneticAlgorithm {
             var nextGeneration = reproductionOperator(actualPopulation);
 
             mutate(nextGeneration);
+            nextGeneration = filterGeneration(nextGeneration);
             actualPopulation.addNewGeneration(nextGeneration);
+
             actualPopulation = actualPopulation.naturalSelection(populationSize);
         }
     }
 
-    private void generateInitialPopulation() {
+    private ArrayList<Individual> filterGeneration(ArrayList<Individual> nextGeneration) {
+        return nextGeneration.stream().distinct().collect(toCollection(ArrayList::new));
+    }
+
+    private Population generatePopulation() {
         var individuals = new ArrayList<Individual>();
         while (individuals.size() != populationSize) {
             var path = new ArrayList<Integer>();
@@ -65,7 +75,7 @@ public class GeneticAlgorithm {
             individuals.add(new Individual(path, cities));
         }
 
-        initialPopulation = new Population(individuals);
+        return new Population(individuals);
     }
 
     private ArrayList<Individual> reproductionOperator(Population population) {
@@ -74,10 +84,10 @@ public class GeneticAlgorithm {
 
         for (var i = 0; i < pairsToReproduction; i++) {
             var eliteMember = random.nextInt(forReproduction);
-            var parent = random.nextInt(cities.getSize());
+            var parent = random.nextInt(elitePair);
 
             while (parent == i) {
-                parent = random.nextInt(cities.getSize());
+                parent = random.nextInt(elitePair);
             }
 
             var newIndividuals = crossoverOperator(elite.get(eliteMember), population.getIndividual(parent));
@@ -88,40 +98,28 @@ public class GeneticAlgorithm {
     }
 
     private List<Individual> crossoverOperator(Individual father, Individual mother) {
-        var randomCut = random.nextInt(father.getNumberOfChromosomes() - 2) + 1;
+        var markerOne = getRandomChromosome();
+        var markerTwo = getRandomChromosome();
 
-        var fatherFirstChromosome = father.getChromosomeUntil(randomCut);
-        var fatherSecondChromosome = father.getChromosomeFrom(randomCut);
+        while (markerOne == markerTwo) markerTwo = getRandomChromosome();
 
-        var motherFirstChromosome = mother.getChromosomeUntil(randomCut);
-        var motherSecondChromosome = mother.getChromosomeFrom(randomCut);
-
-        var firstChildChromosome = new ArrayList<>(fatherFirstChromosome);
-        firstChildChromosome.addAll(motherSecondChromosome);
-        var firstChild = new Individual(firstChildChromosome, cities);
-
-        var secondChildChromosome = new ArrayList<>(motherFirstChromosome);
-        secondChildChromosome.addAll(fatherSecondChromosome);
-        var secondChild = new Individual(secondChildChromosome, cities);
-
-        return List.of(firstChild, secondChild);
+        return markerOne < markerTwo ? father.crossoverWith(mother, markerOne, markerTwo) : father.crossoverWith(mother, markerTwo, markerOne);
     }
 
     private void mutate(ArrayList<Individual> nextGeneration) {
         var beta = random.nextDouble();
 
-        if (beta < mutationRate) {
-            var individualToMutate = nextGeneration.get(random.nextInt(nextGeneration.size()));
+        for (var individual : nextGeneration) {
+            if (beta < mutationRate) {
+                var chromosomeOne = getRandomChromosome();
+                var chromosomeTwo = getRandomChromosome();
 
-            var chromosomeSize = individualToMutate.getNumberOfChromosomes();
-            var chromosomeOne = random.nextInt(chromosomeSize);
-            var chromosomeTwo = random.nextInt(chromosomeSize);
+                while (chromosomeOne == chromosomeTwo) {
+                    chromosomeTwo = getRandomChromosome();
+                }
 
-            while (chromosomeOne == chromosomeTwo) {
-                chromosomeTwo = random.nextInt(chromosomeSize);
+                individual.mutate(chromosomeOne, chromosomeTwo);
             }
-
-            individualToMutate.mutate(chromosomeOne, chromosomeTwo);
         }
     }
 
@@ -129,5 +127,9 @@ public class GeneticAlgorithm {
         cities.remove(startCity);
         cities.add(0, startCity);
         cities.add(startCity);
+    }
+
+    private int getRandomChromosome() {
+        return random.nextInt(numberOfChromosomes - 2) + 1;
     }
 }
