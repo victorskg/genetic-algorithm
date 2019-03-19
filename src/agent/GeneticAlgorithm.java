@@ -45,7 +45,9 @@ public class GeneticAlgorithm {
 
         while (actualGeneration < maxGenerations) {
             actualGeneration++;
-            System.out.println("Melhor individuo: " + actualPopulation.getIndividual(0).toString());
+            var bestIndividual = actualPopulation.getIndividual(0);
+
+            System.out.println("Melhor individuo: " + bestIndividual);
 
             var nextGeneration = reproductionOperator(actualPopulation);
 
