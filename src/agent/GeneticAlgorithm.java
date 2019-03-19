@@ -126,7 +126,7 @@ public class GeneticAlgorithm {
     }
 
     private void organize(ArrayList<Integer> cities) {
-        cities.remove(startCity);
+        cities.remove(cities.indexOf(startCity));
         cities.add(0, startCity);
         cities.add(startCity);
     }
